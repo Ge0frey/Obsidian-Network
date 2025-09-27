@@ -54,50 +54,6 @@ Obsidian Network revolutionizes DAO treasury management by creating the first **
 
 ##  Architecture
 
-### Core Technology Stack
-
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        UI[Next.js Dashboard]
-        MOBILE[Mobile Interface]
-        API[API Gateway]
-    end
-    
-    subgraph "AI Agent Orchestration"
-        ELIZA[ElizaOS Runtime]
-        AGENTS[Specialized Agents]
-        COLLAB[Collaboration Engine]
-    end
-    
-    subgraph "Privacy & Intelligence"
-        ZK[Zero-Knowledge Proofs]
-        INTEL[Cross-DAO Intelligence]
-        BENCH[Privacy-Preserving Benchmarks]
-    end
-    
-    subgraph "Communication"
-        MCP[Agent Communication MCP]
-        SUPABASE[Supabase Backend]
-    end
-    
-    subgraph "Blockchain"
-        MIDNIGHT[Midnight Blockchain]
-        REGISTRY[Marketplace Registry]
-        DAO[DAO Contracts]
-    end
-    
-    UI --> API
-    API --> ELIZA
-    ELIZA --> AGENTS
-    AGENTS --> ZK
-    ZK --> INTEL
-    AGENTS --> MCP
-    MCP --> SUPABASE
-    AGENTS --> REGISTRY
-    REGISTRY --> MIDNIGHT
-```
-
 ###  Four-Layer Architecture
 
 #### **Layer 1: Agent Marketplace Registry**
