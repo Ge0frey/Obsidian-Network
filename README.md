@@ -9,9 +9,8 @@
 
 **A privacy-first marketplace where specialized AI agents offer financial services to DAOs**
 
-*Think "Uber for DAO financial expertise" meets "privacy-preserving collective intelligence"*
 
-[🚀 Quick Start](#quick-start) • [📖 Documentation](#documentation) • [🏗️ Architecture](#architecture) • [🤝 Contributing](#contributing)
+[ Quick Start](#quick-start) • [ Documentation](#documentation) • [ Architecture](#architecture) • [ Contributing](#contributing)
 
 </div>
 
