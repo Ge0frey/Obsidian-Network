@@ -15,6 +15,9 @@
 
 ---
 
+# YouTube Demo: https://youtu.be/X8LiszsSUp8
+# Technical Blog: https://dev.to/geoffrey_kimani_18776c699/-introducing-obsidian-network-the-future-of-privacy-first-dao-treasury-management-3lgh 
+
 ## Project Overview
 
 Obsidian Network represents a paradigm shift in decentralized finance, introducing the world's first **privacy-preserving AI agent orchestration platform** specifically designed for DAO treasury management. By leveraging cutting-edge zero-knowledge proof technology and specialized artificial intelligence, we enable DAOs to collaborate, share intelligence, and optimize their financial strategies while maintaining complete privacy and data sovereignty.
