@@ -270,11 +270,14 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
       
       // First, join the room
       console.log(`🚪 Joining room: ${roomId}`);
-      socket.emit('message', {
-        type: SOCKET_MESSAGE_TYPE.ROOM_JOINING,
-        payload: {
-          roomId: roomId,
-          entityId: entityId
+      socket.emit('room:join', {
+        channelId: roomId,
+        serverId: '00000000-0000-0000-0000-000000000000',
+        agentId: targetAgentId,
+        userId: entityId,
+        metadata: {
+          source: 'api',
+          requestedAt: new Date().toISOString()
         }
       });
       
@@ -282,28 +285,38 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
       setTimeout(() => {
         console.log(`💬 Sending message to room: ${roomId}`);
         
+        const serverId = '00000000-0000-0000-0000-000000000000';
         const messagePayload = {
-          type: SOCKET_MESSAGE_TYPE.SEND_MESSAGE,
-          payload: {
-            channelId: roomId,           // Required: channelId
-            serverId: '00000000-0000-0000-0000-000000000000',   // Required: serverId (reverted back)
-            senderId: entityId,          // Required: senderId (reverted back)
-            message: message,            // Required: message
-            senderName: 'Obsidian API Client',
-            roomId: roomId,             // Keep roomId for compatibility
-            messageId: messageId,
+          channelId: roomId,
+          messageId,
+          content: {
+            text: message,
             source: 'api',
             attachments: [],
             metadata: {
               agentId: targetAgentId,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              senderName: 'Obsidian API Client'
             }
+          },
+          author: {
+            id: entityId,
+            name: 'Obsidian API Client'
+          },
+          agentId: targetAgentId,
+          serverId,
+          routing: {
+            targetChannel: roomId,
+            origin: 'obsidian-api-server',
+            roomId
           }
         };
         
-        console.log(`[${new Date().toLocaleTimeString()}] INFO: [SocketIO ${socket.id}] Full payload for debugging:`, JSON.stringify(messagePayload.payload, null, 2));
-        
-        socket.emit('message', messagePayload);
+        console.log(`[${new Date().toLocaleTimeString()}] INFO: [SocketIO ${socket.id}] Prepared message payload:`, JSON.stringify(messagePayload, null, 2));
+
+        socket.emit('client:message', messagePayload, (ack: any) => {
+          console.log('📨 client:message ack:', ack);
+        });
       }, 1000);
     });
     
