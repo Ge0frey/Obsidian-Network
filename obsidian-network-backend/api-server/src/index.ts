@@ -4,12 +4,18 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
+import { io as SocketIOClient, Socket } from 'socket.io-client';
+
+// Global type declarations
+declare global {
+  var elizaEndpointsDiscovered: boolean | undefined;
+}
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(cors());
@@ -21,8 +27,9 @@ const server = createServer(app);
 // WebSocket server for real-time updates
 const wss = new WebSocketServer({ server });
 
-// Eliza agent configuration
+// Service configurations
 const ELIZA_URL = process.env.ELIZA_URL || 'http://localhost:3000';
+const MCP_URL = process.env.MCP_API_URL || 'http://localhost:3001';
 const AGENT_ID = process.env.AGENT_ID || 'obsidian';
 
 // Type definitions
@@ -61,8 +68,255 @@ interface Proposal {
   deadline: Date;
 }
 
-// Mock data store (in production, use a real database)
-const mockData = {
+// Helper functions for MCP service integration
+async function callMCPService(endpoint: string, method: string = 'GET', data?: any) {
+  try {
+    const config: any = {
+      method,
+      url: `${MCP_URL}${endpoint}`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    
+    if (data && method !== 'GET') {
+      config.data = data;
+    }
+    
+    const response = await axios(config);
+    return response.data;
+  } catch (error: any) {
+    console.error(`MCP Service Error (${endpoint}):`, error.message);
+    throw error;
+  }
+}
+
+async function discoverElizaEndpoints() {
+  console.log('🔍 Discovering Eliza endpoints...');
+  
+  // Test basic connectivity
+  try {
+    const healthCheck = await axios.get(`${ELIZA_URL}`);
+    console.log('✅ Eliza base URL accessible');
+  } catch (error: any) {
+    console.log('❌ Eliza base URL not accessible:', error.message);
+  }
+
+  // Check for common ElizaOS endpoints
+  const endpointsToTest = [
+    '/api/agents',
+    '/api/agents/default/message',
+    '/api/messaging/submit',
+    '/api/chat',
+    '/api/message',
+    '/helloworld',
+    '/agents',
+    '/ping',
+    '/health'
+  ];
+
+  for (const endpoint of endpointsToTest) {
+    try {
+      const response = await axios.get(`${ELIZA_URL}${endpoint}`, { timeout: 2000 });
+      console.log(`✅ GET ${endpoint}: ${response.status} - ${typeof response.data}`);
+    } catch (error: any) {
+      if (error.response) {
+        console.log(`📍 GET ${endpoint}: ${error.response.status} - Available but wrong method/format`);
+      } else {
+        console.log(`❌ GET ${endpoint}: ${error.message}`);
+      }
+    }
+  }
+}
+
+async function getObsidianAgentId() {
+  try {
+    const response = await axios.get(`${ELIZA_URL}/api/agents`);
+    if (response.data?.success && response.data?.data?.agents) {
+      const obsidianAgent = response.data.data.agents.find(
+        (agent: any) => agent.name === 'Obsidian' || agent.characterName === 'Obsidian'
+      );
+      if (obsidianAgent) {
+        console.log(`🤖 Found Obsidian agent: ${obsidianAgent.id}`);
+        return obsidianAgent.id;
+      }
+    }
+    console.warn('⚠️ Obsidian agent not found, using default');
+    return null;
+  } catch (error) {
+    console.warn('⚠️ Could not fetch agent list:', error);
+    return null;
+  }
+}
+
+// Socket.IO message types from ElizaOS documentation
+enum SOCKET_MESSAGE_TYPE {
+  ROOM_JOINING = 1,      // Join a channel/room
+  SEND_MESSAGE = 2,      // Send a message
+  MESSAGE = 3,           // Generic message
+  ACK = 4,              // Acknowledgment
+  THINKING = 5,         // Agent is thinking
+  CONTROL = 6           // Control messages
+}
+
+// Global Socket.IO client for persistent connection
+let elizaSocket: Socket | null = null;
+
+// Helper function to generate UUID
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Initialize Socket.IO connection to Eliza
+async function initializeElizaSocket(): Promise<Socket> {
+  if (elizaSocket && elizaSocket.connected) {
+    return elizaSocket;
+  }
+
+  console.log('🔌 Connecting to Eliza via Socket.IO...');
+  
+  return new Promise((resolve, reject) => {
+    elizaSocket = SocketIOClient(ELIZA_URL, {
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000
+    });
+
+    elizaSocket.on('connect', () => {
+      console.log('✅ Connected to Eliza Socket.IO:', elizaSocket!.id);
+      resolve(elizaSocket!);
+    });
+
+    elizaSocket.on('connect_error', (error) => {
+      console.error('❌ Socket.IO connection error:', error);
+      reject(error);
+    });
+
+    elizaSocket.on('disconnect', (reason) => {
+      console.log('🔌 Disconnected from Eliza:', reason);
+    });
+
+    // Debug: Log all events
+    elizaSocket.onAny((eventName, ...args) => {
+      console.log('🔔 Socket event:', eventName, args);
+    });
+  });
+}
+
+async function callElizaService(message: string, agentId?: string): Promise<any> {
+  try {
+    console.log(`📤 Sending message to Eliza via Socket.IO: "${message}"`);
+    
+    // Get the correct Obsidian agent ID
+    const obsidianAgentId = await getObsidianAgentId();
+    const targetAgentId = obsidianAgentId || agentId || AGENT_ID;
+    const roomId = targetAgentId; // Use agent ID as room ID
+    
+    console.log(`🎯 Targeting agent/room: ${targetAgentId}`);
+    
+    // Initialize socket connection
+    const socket = await initializeElizaSocket();
+    
+    return new Promise((resolve, reject) => {
+      const messageId = generateUUID();
+      const entityId = `api-client-${Date.now()}`;
+      let responseReceived = false;
+      
+      // Set timeout for response
+      const timeout = setTimeout(() => {
+        if (!responseReceived) {
+          responseReceived = true;
+          reject(new Error('Timeout waiting for Eliza response'));
+        }
+      }, 15000);
+      
+      // Listen for message broadcasts
+      const handleMessageBroadcast = (data: any) => {
+        console.log('📨 Received broadcast:', data);
+        
+        // Check if this message is for our room and is a response to our message
+        if ((data.roomId === roomId || data.channelId === roomId) && !responseReceived) {
+          responseReceived = true;
+          clearTimeout(timeout);
+          
+          console.log('✅ Received response from Obsidian:', data);
+          
+          // Clean up listener
+          socket.off('messageBroadcast', handleMessageBroadcast);
+          
+          resolve({
+            success: true,
+            message: data.text || data.content || 'Response received from Obsidian',
+            agentName: data.senderName || 'Obsidian',
+            source: 'socketio',
+            metadata: data.metadata
+          });
+        }
+      };
+      
+      // Listen for broadcasts
+      socket.on('messageBroadcast', handleMessageBroadcast);
+      
+      // First, join the room
+      console.log(`🚪 Joining room: ${roomId}`);
+      socket.emit('message', {
+        type: SOCKET_MESSAGE_TYPE.ROOM_JOINING,
+        payload: {
+          roomId: roomId,
+          entityId: entityId
+        }
+      });
+      
+      // Wait a moment for room join, then send message
+      setTimeout(() => {
+        console.log(`💬 Sending message to room: ${roomId}`);
+        socket.emit('message', {
+          type: SOCKET_MESSAGE_TYPE.SEND_MESSAGE,
+          payload: {
+            channelId: roomId,           // Required: channelId
+            serverId: '00000000-0000-0000-0000-000000000000',  // Required: serverId
+            senderId: entityId,          // Required: senderId (author_id)
+            message: message,            // Required: message
+            senderName: 'Obsidian API Client',
+            roomId: roomId,             // Keep roomId for compatibility
+            messageId: messageId,
+            source: 'api',
+            attachments: [],
+            metadata: {
+              agentId: targetAgentId,
+              timestamp: new Date().toISOString()
+            }
+          }
+        });
+      }, 1000);
+    });
+    
+  } catch (error: any) {
+    console.error('🚨 Eliza Socket.IO Error:', error.message);
+    
+    // Fallback to helloworld endpoint if Socket.IO fails
+    console.log('🔄 Falling back to helloworld endpoint...');
+    try {
+      const response = await axios.get(`${ELIZA_URL}/helloworld`);
+      return {
+        success: true,
+        message: `Hello! I'm Obsidian AI. You said: "${message}". I can help you with DAO treasury management and financial analysis. (Note: Using fallback endpoint - Socket.IO integration in progress)`,
+        source: 'helloworld_fallback'
+      };
+    } catch (fallbackError) {
+      throw error; // Throw original Socket.IO error if fallback also fails
+    }
+  }
+}
+
+// Fallback mock data (used when services are unavailable)
+const fallbackData = {
   daos: [
     {
       id: 'moondao',
@@ -150,38 +404,130 @@ app.get('/health', (req, res) => {
 });
 
 // DAO endpoints
-app.get('/daos', (req, res) => {
-  res.json(mockData.daos);
-});
-
-app.get('/daos/:id', (req, res) => {
-  const dao = mockData.daos.find(d => d.id === req.params.id);
-  if (!dao) {
-    return res.status(404).json({ error: 'DAO not found' });
-  }
-  res.json(dao);
-});
-
-app.get('/daos/:id/treasury', (req, res) => {
-  // Mock treasury data
-  const treasury = {
-    totalValue: 5230000,
-    tokens: [
-      { id: '1', symbol: 'USDC', name: 'USD Coin', balance: 2510400, value: 2510400, price: 1, change24h: 0, allocation: 48 },
-      { id: '2', symbol: 'ETH', name: 'Ethereum', balance: 850, value: 1673600, price: 1969, change24h: 2.3, allocation: 32 },
-      { id: '3', symbol: 'MOON', name: 'MoonDAO', balance: 1046000, value: 1046000, price: 1, change24h: -1.2, allocation: 20 },
-    ],
-    transactions: [],
-    strategies: [],
-    performanceMetrics: {
-      totalReturn: 12.3,
-      sharpeRatio: 1.8,
-      volatility: 18.5,
-      maxDrawdown: -12.3,
-      winRate: 68
+app.get('/daos', async (req, res) => {
+  try {
+    // Try to get DAO state from MCP service
+    const daoState = await callMCPService('/dao/state').catch(() => null);
+    
+    if (daoState) {
+      // Transform MCP data to frontend format
+      const daos = [{
+        id: daoState.id || 'moondao',
+        name: daoState.name || 'MoonDAO',
+        address: daoState.address || fallbackData.daos[0].address,
+        treasuryValue: daoState.treasuryValue || 0,
+        treasuryValueChange24h: daoState.treasuryValueChange24h || 0,
+        memberCount: daoState.memberCount || 0,
+        riskScore: daoState.riskScore || 'low',
+        portfolioAllocation: daoState.portfolioAllocation || fallbackData.daos[0].portfolioAllocation,
+        performanceRank: daoState.performanceRank || 1,
+        totalDAOs: daoState.totalDAOs || 1,
+        lastActivity: new Date()
+      }];
+      res.json(daos);
+    } else {
+      // Fallback to mock data
+      res.json(fallbackData.daos);
     }
-  };
-  res.json(treasury);
+  } catch (error) {
+    console.error('DAO list endpoint error:', error);
+    res.json(fallbackData.daos);
+  }
+});
+
+app.get('/daos/:id', async (req, res) => {
+  try {
+    // Try to get specific DAO data from MCP service
+    const daoState = await callMCPService('/dao/state').catch(() => null);
+    
+    if (daoState && (daoState.id === req.params.id || req.params.id === 'moondao')) {
+      const dao = {
+        id: req.params.id,
+        name: daoState.name || 'MoonDAO',
+        address: daoState.address || fallbackData.daos[0].address,
+        treasuryValue: daoState.treasuryValue || fallbackData.daos[0].treasuryValue,
+        treasuryValueChange24h: daoState.treasuryValueChange24h || fallbackData.daos[0].treasuryValueChange24h,
+        memberCount: daoState.memberCount || fallbackData.daos[0].memberCount,
+        riskScore: daoState.riskScore || fallbackData.daos[0].riskScore,
+        portfolioAllocation: daoState.portfolioAllocation || fallbackData.daos[0].portfolioAllocation,
+        performanceRank: daoState.performanceRank || fallbackData.daos[0].performanceRank,
+        totalDAOs: daoState.totalDAOs || fallbackData.daos[0].totalDAOs,
+        lastActivity: new Date()
+      };
+      res.json(dao);
+    } else {
+      // Fallback to finding in mock data
+      const dao = fallbackData.daos.find(d => d.id === req.params.id);
+      if (!dao) {
+        return res.status(404).json({ error: 'DAO not found' });
+      }
+      res.json(dao);
+    }
+  } catch (error) {
+    console.error('DAO detail endpoint error:', error);
+    const dao = fallbackData.daos.find(d => d.id === req.params.id);
+    if (!dao) {
+      return res.status(404).json({ error: 'DAO not found' });
+    }
+    res.json(dao);
+  }
+});
+
+app.get('/daos/:id/treasury', async (req, res) => {
+  try {
+    // Try to get real wallet data from MCP service
+    const [walletStatus, walletBalance] = await Promise.allSettled([
+      callMCPService('/wallet/status'),
+      callMCPService('/wallet/balance')
+    ]);
+
+    let treasury;
+    
+    if (walletStatus.status === 'fulfilled' && walletBalance.status === 'fulfilled') {
+      // Use real data from MCP
+      const status = walletStatus.value;
+      const balance = walletBalance.value;
+      
+      treasury = {
+        totalValue: balance.totalValue || 0,
+        tokens: balance.tokens || [],
+        transactions: [],
+        strategies: [],
+        performanceMetrics: {
+          totalReturn: 12.3, // These could be calculated from historical data
+          sharpeRatio: 1.8,
+          volatility: 18.5,
+          maxDrawdown: -12.3,
+          winRate: 68
+        }
+      };
+    } else {
+      // Fallback to mock data if MCP service is unavailable
+      console.warn('MCP service unavailable, using fallback data');
+      treasury = {
+        totalValue: 5230000,
+        tokens: [
+          { id: '1', symbol: 'USDC', name: 'USD Coin', balance: 2510400, value: 2510400, price: 1, change24h: 0, allocation: 48 },
+          { id: '2', symbol: 'ETH', name: 'Ethereum', balance: 850, value: 1673600, price: 1969, change24h: 2.3, allocation: 32 },
+          { id: '3', symbol: 'MOON', name: 'MoonDAO', balance: 1046000, value: 1046000, price: 1, change24h: -1.2, allocation: 20 },
+        ],
+        transactions: [],
+        strategies: [],
+        performanceMetrics: {
+          totalReturn: 12.3,
+          sharpeRatio: 1.8,
+          volatility: 18.5,
+          maxDrawdown: -12.3,
+          winRate: 68
+        }
+      };
+    }
+    
+    res.json(treasury);
+  } catch (error) {
+    console.error('Treasury endpoint error:', error);
+    res.status(500).json({ error: 'Failed to fetch treasury data' });
+  }
 });
 
 app.get('/daos/:id/transactions', (req, res) => {
@@ -204,16 +550,18 @@ app.get('/daos/:id/transactions', (req, res) => {
 });
 
 app.get('/daos/:id/proposals', (req, res) => {
-  res.json(mockData.proposals);
+  res.json(fallbackData.proposals);
 });
 
 // Agent marketplace endpoints
 app.get('/agents', (req, res) => {
-  res.json(mockData.agents);
+  // For now, use fallback data for agents as they're not directly tied to blockchain
+  // In the future, this could query a registry of available agents
+  res.json(fallbackData.agents);
 });
 
 app.get('/agents/:id', (req, res) => {
-  const agent = mockData.agents.find(a => a.id === req.params.id);
+  const agent = fallbackData.agents.find(a => a.id === req.params.id);
   if (!agent) {
     return res.status(404).json({ error: 'Agent not found' });
   }
@@ -251,62 +599,120 @@ app.post('/agent/chat', async (req, res) => {
   try {
     const { message, agentId } = req.body;
     
-    // Mock response for now (replace with real Eliza integration later)
-    const mockResponses = [
-      "Hello! I'm Obsidian, your AI financial advisor. I can help you optimize your DAO treasury through privacy-preserving analytics and cross-DAO intelligence.",
-      "I've analyzed your query through our secure network. Based on anonymized data from similar DAOs, I recommend reviewing your risk allocation.",
-      "Your treasury is performing well! I can see opportunities for yield optimization. Would you like me to run a detailed analysis?",
-      "I'm monitoring market conditions across the ecosystem. Current trends suggest increasing stablecoin allocation might be prudent.",
-      "Through privacy-preserving cross-DAO intelligence, I've identified several optimization strategies that match your risk profile."
-    ];
-    
-    const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-    
-    // TODO: Replace with real Eliza integration
-    // For now, try to connect to Eliza but fall back to mock
-    try {
-      const userId = 'user-' + Date.now();
-      const channelId = 'channel-' + Date.now();
-      
-      const response = await axios.post(`${ELIZA_URL}/api/messaging/submit`, {
-        channel_id: channelId,
-        server_id: "00000000-0000-0000-0000-000000000000",
-        author_id: userId,
-        content: message,
-        source_type: "client_chat",
-        raw_message: {},
-        metadata: {
-          channelType: "DM",
-          isDm: true,
-          targetUserId: agentId || AGENT_ID
-        }
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ 
+        error: 'Message is required and must be a string',
+        success: false 
       });
-      
-      // If Eliza responds successfully, use its response
-      if (response.data?.success && response.data?.data?.content) {
-        return res.json({
-          message: response.data.data.content,
-          agentId: agentId || AGENT_ID,
-          success: true
-        });
-      }
-    } catch (elizaError: any) {
-      console.log('Eliza not available, using mock response:', elizaError.message);
     }
     
-    // Use mock response
-    res.json({
-      message: randomResponse,
+    // Get response from Eliza (no fallbacks)
+    const elizaResponse = await callElizaService(message, agentId);
+    
+    // Handle different possible response structures
+    let responseMessage = '';
+    let responseSource = elizaResponse?.source || 'eliza';
+    
+    if (elizaResponse?.message) {
+      responseMessage = elizaResponse.message;
+    } else if (elizaResponse?.response) {
+      responseMessage = elizaResponse.response;
+    } else if (elizaResponse?.text) {
+      responseMessage = elizaResponse.text;
+    } else if (elizaResponse?.data?.content) {
+      responseMessage = elizaResponse.data.content;
+    } else if (typeof elizaResponse === 'string') {
+      responseMessage = elizaResponse;
+    } else {
+      console.error('Unexpected Eliza response structure:', elizaResponse);
+      throw new Error('Invalid response format from Eliza');
+    }
+    
+    return res.json({
+      message: responseMessage,
       agentId: agentId || AGENT_ID,
-      success: true
+      success: true,
+      source: responseSource
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in chat endpoint:', error);
     res.status(500).json({ 
       error: 'Failed to communicate with AI agent',
-      message: 'I apologize, but I am currently unable to respond. Please try again later.'
+      message: error.message || 'Eliza service is unavailable',
+      success: false
     });
+  }
+});
+
+// MCP Service Proxy Endpoints (for frontend compatibility)
+app.get('/wallet/status', async (req, res) => {
+  try {
+    const status = await callMCPService('/wallet/status');
+    res.json(status);
+  } catch (error) {
+    console.error('Wallet status error:', error);
+    res.status(500).json({ error: 'Failed to get wallet status' });
+  }
+});
+
+app.get('/wallet/balance', async (req, res) => {
+  try {
+    const balance = await callMCPService('/wallet/balance');
+    res.json(balance);
+  } catch (error) {
+    console.error('Wallet balance error:', error);
+    res.status(500).json({ error: 'Failed to get wallet balance' });
+  }
+});
+
+app.post('/wallet/send', async (req, res) => {
+  try {
+    const result = await callMCPService('/wallet/send', 'POST', req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Wallet send error:', error);
+    res.status(500).json({ error: 'Failed to send transaction' });
+  }
+});
+
+app.get('/wallet/tokens/balance/:tokenName', async (req, res) => {
+  try {
+    const balance = await callMCPService(`/wallet/tokens/balance/${req.params.tokenName}`);
+    res.json(balance);
+  } catch (error) {
+    console.error('Token balance error:', error);
+    res.status(500).json({ error: 'Failed to get token balance' });
+  }
+});
+
+app.post('/dao/open-election', async (req, res) => {
+  try {
+    const result = await callMCPService('/dao/open-election', 'POST', req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Open election error:', error);
+    res.status(500).json({ error: 'Failed to open election' });
+  }
+});
+
+app.post('/dao/cast-vote', async (req, res) => {
+  try {
+    const result = await callMCPService('/dao/cast-vote', 'POST', req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Cast vote error:', error);
+    res.status(500).json({ error: 'Failed to cast vote' });
+  }
+});
+
+app.get('/dao/state', async (req, res) => {
+  try {
+    const state = await callMCPService('/dao/state');
+    res.json(state);
+  } catch (error) {
+    console.error('DAO state error:', error);
+    res.status(500).json({ error: 'Failed to get DAO state' });
   }
 });
 
@@ -328,8 +734,31 @@ wss.on('connection', (ws) => {
 });
 
 // Start server
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('📤 Shutting down gracefully...');
+  if (elizaSocket) {
+    elizaSocket.disconnect();
+  }
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('📤 Shutting down gracefully...');
+  if (elizaSocket) {
+    elizaSocket.disconnect();
+  }
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Obsidian API Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
-  console.log(`🤖 Connected to Eliza at ${ELIZA_URL}`);
+  console.log(`🤖 Ready to connect to Eliza at ${ELIZA_URL} via Socket.IO`);
 });

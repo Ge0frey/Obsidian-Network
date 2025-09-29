@@ -108,14 +108,14 @@ class ApiService {
     return response.data
   }
 
-  // Midnight MCP Tools Integration
+  // Midnight MCP Tools Integration (proxied through backend)
   async getWalletStatus(): Promise<any> {
-    const response = await this.mcpApi.get('/wallet/status')
+    const response = await this.api.get('/wallet/status')
     return response.data
   }
 
   async getWalletBalance(): Promise<any> {
-    const response = await this.mcpApi.get('/wallet/balance')
+    const response = await this.api.get('/wallet/balance')
     return response.data
   }
 
@@ -124,27 +124,27 @@ class ApiService {
     amount: string
     token?: string
   }): Promise<any> {
-    const response = await this.mcpApi.post('/wallet/send', data)
+    const response = await this.api.post('/wallet/send', data)
     return response.data
   }
 
   async getTokenBalance(tokenName: string): Promise<any> {
-    const response = await this.mcpApi.get(`/wallet/tokens/balance/${tokenName}`)
+    const response = await this.api.get(`/wallet/tokens/balance/${tokenName}`)
     return response.data
   }
 
   async openDaoElection(electionId: string): Promise<any> {
-    const response = await this.mcpApi.post('/dao/open-election', { electionId })
+    const response = await this.api.post('/dao/open-election', { electionId })
     return response.data
   }
 
   async castDaoVote(voteType: 'yes' | 'no' | 'absence'): Promise<any> {
-    const response = await this.mcpApi.post('/dao/cast-vote', { voteType })
+    const response = await this.api.post('/dao/cast-vote', { voteType })
     return response.data
   }
 
   async getDaoState(): Promise<any> {
-    const response = await this.mcpApi.get('/dao/state')
+    const response = await this.api.get('/dao/state')
     return response.data
   }
 
