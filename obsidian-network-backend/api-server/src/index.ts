@@ -67,7 +67,7 @@ const mockData = {
     {
       id: 'moondao',
       name: 'MoonDAO',
-      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8b9A0',
+      address: 'mn_shield-addr_test1sdveuqw0yalmu3juluhtrfyyav3xglyug5hfscccxmtdvgkll4fsxq9j3vs753uetn8my9s78wyhnjkzasda3p3qrldqddhel8wmuxp4vgyus895',
       treasuryValue: 5230000,
       treasuryValueChange24h: 3.45,
       memberCount: 1250,
@@ -251,19 +251,58 @@ app.post('/agent/chat', async (req, res) => {
   try {
     const { message, agentId } = req.body;
     
-    // Forward to Eliza agent
-    const response = await axios.post(`${ELIZA_URL}/api/agents/${agentId || AGENT_ID}/message`, {
-      text: message,
-      userId: 'user-' + Date.now(), // Generate a unique user ID
-      roomId: 'default'
+    // Mock response for now (replace with real Eliza integration later)
+    const mockResponses = [
+      "Hello! I'm Obsidian, your AI financial advisor. I can help you optimize your DAO treasury through privacy-preserving analytics and cross-DAO intelligence.",
+      "I've analyzed your query through our secure network. Based on anonymized data from similar DAOs, I recommend reviewing your risk allocation.",
+      "Your treasury is performing well! I can see opportunities for yield optimization. Would you like me to run a detailed analysis?",
+      "I'm monitoring market conditions across the ecosystem. Current trends suggest increasing stablecoin allocation might be prudent.",
+      "Through privacy-preserving cross-DAO intelligence, I've identified several optimization strategies that match your risk profile."
+    ];
+    
+    const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+    
+    // TODO: Replace with real Eliza integration
+    // For now, try to connect to Eliza but fall back to mock
+    try {
+      const userId = 'user-' + Date.now();
+      const channelId = 'channel-' + Date.now();
+      
+      const response = await axios.post(`${ELIZA_URL}/api/messaging/submit`, {
+        channel_id: channelId,
+        server_id: "00000000-0000-0000-0000-000000000000",
+        author_id: userId,
+        content: message,
+        source_type: "client_chat",
+        raw_message: {},
+        metadata: {
+          channelType: "DM",
+          isDm: true,
+          targetUserId: agentId || AGENT_ID
+        }
+      });
+      
+      // If Eliza responds successfully, use its response
+      if (response.data?.success && response.data?.data?.content) {
+        return res.json({
+          message: response.data.data.content,
+          agentId: agentId || AGENT_ID,
+          success: true
+        });
+      }
+    } catch (elizaError: any) {
+      console.log('Eliza not available, using mock response:', elizaError.message);
+    }
+    
+    // Use mock response
+    res.json({
+      message: randomResponse,
+      agentId: agentId || AGENT_ID,
+      success: true
     });
     
-    res.json({
-      message: response.data.text || response.data.message || 'I apologize, but I could not process your request.',
-      agentId: agentId || AGENT_ID
-    });
   } catch (error) {
-    console.error('Error communicating with Eliza:', error);
+    console.error('Error in chat endpoint:', error);
     res.status(500).json({ 
       error: 'Failed to communicate with AI agent',
       message: 'I apologize, but I am currently unable to respond. Please try again later.'

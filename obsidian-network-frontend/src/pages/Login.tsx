@@ -86,7 +86,7 @@ export default function Login() {
 
   // For demo purposes - quick fill
   const handleDemoLogin = () => {
-    setWalletAddress('0x742d35Cc6634C0532925a3b844Bc9e7595f8b9A0')
+    setWalletAddress('mn_shield-addr_test1sdveuqw0yalmu3juluhtrfyyav3xglyug5hfscccxmtdvgkll4fsxq9j3vs753uetn8my9s78wyhnjkzasda3p3qrldqddhel8wmuxp4vgyus895')
     setDaoId('moondao')
   }
 
@@ -138,7 +138,7 @@ export default function Login() {
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="0x..."
+                placeholder="mn_shield-addr_..."
                 className="input w-full"
                 disabled={isConnecting}
               />
@@ -188,7 +188,7 @@ export default function Login() {
             className="btn btn-outline btn-md w-full"
             disabled={isConnecting}
           >
-            Use Demo Account
+            Add Midnight walletAddress
           </button>
 
           {/* Divider */}
