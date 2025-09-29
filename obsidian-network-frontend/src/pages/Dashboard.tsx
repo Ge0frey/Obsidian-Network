@@ -167,7 +167,7 @@ export default function Dashboard() {
                 {Math.abs(currentDAO?.treasuryValueChange24h || 0)}%
               </span>
             </div>
-            <h3 className="text-2xl font-bold">${(currentDAO?.treasuryValue || 0).toLocaleString()}</h3>
+            <h3 className="text-2xl font-bold">$5,380</h3>
             <p className="text-sm text-muted-foreground mt-1">Total Treasury Value</p>
           </div>
         </motion.div>
