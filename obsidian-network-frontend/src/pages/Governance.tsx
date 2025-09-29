@@ -3,7 +3,6 @@ import {
   Vote, 
   Clock, 
   CheckCircle, 
-  XCircle,
   Users,
   FileText,
   AlertTriangle,
@@ -21,8 +20,7 @@ import {
 import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import { Proposal } from '../types'
-import api from '../services/api'
+import type { Proposal } from '../types'
 import toast from 'react-hot-toast'
 import { format, formatDistanceToNow } from 'date-fns'
 
@@ -217,7 +215,7 @@ export default function Governance() {
             <button
               className="btn btn-outline btn-md"
               onClick={() => {
-                toast.info('Create proposal feature coming soon')
+                toast('Create proposal feature coming soon')
               }}
             >
               <FileText className="w-4 h-4 mr-2" />

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { 
   TrendingUp, 
-  TrendingDown, 
   AlertTriangle, 
   DollarSign,
   Users,
@@ -15,19 +14,17 @@ import {
   Zap,
   Wallet
 } from 'lucide-react'
-import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import api from '../services/api'
 import { format } from 'date-fns'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { currentDAO, addNotification } = useStore()
   const [isLoading, setIsLoading] = useState(true)
-  const [treasuryData, setTreasuryData] = useState<any>(null)
 
   useEffect(() => {
     // Simulate loading treasury data
@@ -376,7 +373,7 @@ export default function Dashboard() {
             <p className="card-description">Real-time insights from your agents</p>
           </div>
           <div className="card-content space-y-3">
-            {agentRecommendations.map((rec, index) => (
+            {agentRecommendations.map((rec) => (
               <div key={rec.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-start space-x-3">
                   {getRecommendationIcon(rec.type)}

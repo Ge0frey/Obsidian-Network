@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { DAO, Agent, User, UserPreferences, Notification, Treasury } from '../types'
+import type { DAO, Agent, User, Notification, Treasury } from '../types'
 
 interface AppState {
   // User State

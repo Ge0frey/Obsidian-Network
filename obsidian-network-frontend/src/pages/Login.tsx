@@ -86,7 +86,7 @@ export default function Login() {
 
   // For demo purposes - quick fill
   const handleDemoLogin = () => {
-    setWalletAddress('mn_shield-addr_test1sdveuqw0yalmu3juluhtrfyyav3xglyug5hfscccxmtdvgkll4fsxq9j3vs753uetn8my9s78wyhnjkzasda3p3qrldqddhel8wmuxp4vgyus895')
+    setWalletAddress('mn_shield-addr_test1wvzrcdgfjgtsaxdmjxg222nf0hfhrkjw4wmhvwldhenle3a5n30qxqxqdqs7us9ppcgj8kkj7kk845g4wqxlumq53nmudypz6vafq5zkyqt5uz6u')
     setDaoId('moondao')
   }
 

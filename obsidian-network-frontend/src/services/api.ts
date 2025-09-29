@@ -1,5 +1,6 @@
-import axios, { AxiosInstance } from 'axios'
-import { DAO, Agent, Treasury, MarketInsight, Proposal, Transaction } from '../types'
+import axios from 'axios'
+import type { AxiosInstance } from 'axios'
+import type { DAO, Agent, Treasury, MarketInsight, Proposal, Transaction } from '../types'
 
 // Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'

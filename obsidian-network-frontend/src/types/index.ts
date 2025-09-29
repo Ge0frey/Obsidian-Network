@@ -41,14 +41,16 @@ export interface Agent {
   availability: 'available' | 'busy' | 'offline'
 }
 
-export enum AgentType {
-  RISK_ANALYSIS = 'Risk Analysis',
-  COMPLIANCE = 'Compliance Monitoring',
-  YIELD_OPTIMIZATION = 'Yield Optimization',
-  MARKET_MAKING = 'Market Making',
-  CROSS_DAO_INTELLIGENCE = 'Cross-DAO Intelligence',
-  EMERGENCY_RESPONSE = 'Emergency Response'
-}
+export const AgentType = {
+  RISK_ANALYSIS: 'Risk Analysis',
+  COMPLIANCE: 'Compliance Monitoring',
+  YIELD_OPTIMIZATION: 'Yield Optimization',
+  MARKET_MAKING: 'Market Making',
+  CROSS_DAO_INTELLIGENCE: 'Cross-DAO Intelligence',
+  EMERGENCY_RESPONSE: 'Emergency Response'
+} as const
+
+export type AgentType = typeof AgentType[keyof typeof AgentType]
 
 // Treasury Types
 export interface Treasury {

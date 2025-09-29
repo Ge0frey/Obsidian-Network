@@ -5,29 +5,25 @@ import {
   TrendingDown,
   AlertTriangle,
   Info,
-  BarChart3,
   Globe,
   Shield,
   Zap,
-  Eye,
   Users,
   Activity,
   ChevronUp,
-  ChevronDown,
-  Filter
+  ChevronDown
 } from 'lucide-react'
-import { AreaChart, Area, BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import { MarketInsight, DAOBenchmark } from '../types'
+import type { MarketInsight, DAOBenchmark } from '../types'
 import { format } from 'date-fns'
 
 export default function Intelligence() {
-  const { currentDAO, addNotification } = useStore()
+  const { addNotification } = useStore()
   const [isLoading, setIsLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'trend' | 'risk' | 'opportunity' | 'regulatory'>('all')
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('7d')
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null)
 
   // Mock market insights

@@ -10,7 +10,6 @@ import {
   Key,
   AlertTriangle,
   CheckCircle,
-  Info,
   ToggleLeft,
   ToggleRight,
   FileText,
@@ -24,12 +23,11 @@ import {
 import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import { PrivacySettings } from '../types'
-import api from '../services/api'
+import type { PrivacySettings } from '../types'
 import toast from 'react-hot-toast'
 
 export default function Privacy() {
-  const { currentDAO, addNotification } = useStore()
+  const { addNotification } = useStore()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -57,7 +55,7 @@ export default function Privacy() {
     setIsLoading(true)
     try {
       // In production, this would fetch from the API
-      // const settings = await api.getPrivacySettings(currentDAO?.id || '')
+      // const settings = await api.getPrivacySettings('daoId')
       
       // For now, use the default settings
       setTimeout(() => {
@@ -131,7 +129,7 @@ export default function Privacy() {
     setIsSaving(true)
     try {
       // In production, this would save to the API
-      // await api.updatePrivacySettings(currentDAO?.id || '', privacySettings)
+      // await api.updatePrivacySettings('daoId', privacySettings)
       
       await new Promise(resolve => setTimeout(resolve, 1500))
       

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { 
   Search, 
-  Filter, 
   Star, 
   Users, 
   CheckCircle,
@@ -17,7 +16,8 @@ import {
 import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import { Agent, AgentType } from '../types'
+import type { Agent } from '../types'
+import { AgentType } from '../types'
 import toast from 'react-hot-toast'
 
 export default function AgentMarketplace() {

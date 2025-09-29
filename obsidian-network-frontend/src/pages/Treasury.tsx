@@ -7,7 +7,6 @@ import {
   Shield,
   DollarSign,
   TrendingUp,
-  TrendingDown,
   Plus,
   Minus,
   Clock,
@@ -21,13 +20,13 @@ import {
 import { motion } from 'framer-motion'
 import { useStore } from '../store'
 import { cn } from '../utils/cn'
-import { Token, Transaction, Strategy } from '../types'
+import type { Token } from '../types'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
 export default function Treasury() {
-  const { currentDAO, treasury, setTreasury, addNotification } = useStore()
+  const { treasury, setTreasury, addNotification } = useStore()
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'tokens' | 'transactions' | 'strategies'>('overview')
   const [showSendModal, setShowSendModal] = useState(false)
@@ -135,7 +134,7 @@ export default function Treasury() {
     try {
       // In production, this would fetch real data from the API
       // const walletBalance = await api.getWalletBalance()
-      // const transactions = await api.getTransactions(currentDAO?.id || '')
+      // const transactions = await api.getTransactions('daoId')
       
       // For now, use mock data
       setTreasury(mockTreasury)
@@ -164,7 +163,7 @@ export default function Treasury() {
 
     try {
       // Call the MCP send endpoint
-      const result = await api.sendTransaction({
+      await api.sendTransaction({
         destinationAddress: sendForm.recipient,
         amount: sendForm.amount,
         token: sendForm.token === 'native' ? undefined : sendForm.token
