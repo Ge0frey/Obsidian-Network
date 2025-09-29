@@ -72,9 +72,10 @@ npm run dev
 Once all services are running, you can access:
 
 - **Frontend**: http://localhost:5173
-- **API Server**: http://localhost:3001
-- **MCP Server**: http://localhost:3000
+- **API Server**: http://localhost:3003
+- **MCP Server**: http://localhost:3001
 - **Proof Server**: http://localhost:6300
+- **ElizaOs** : http://localhost:3001
 
 ## Using the Platform
 
@@ -82,8 +83,7 @@ Once all services are running, you can access:
 Navigate to http://localhost:5173 in your browser
 
 ### 2. Login
-- Click "Use Demo Account" for quick access
-- Or enter your wallet address and DAO ID
+enter your wallet address and DAO ID
 
 ### 3. Explore Features
 - **Dashboard**: View treasury overview and AI recommendations
@@ -138,7 +138,7 @@ kill -9 <PID>
 ### Frontend Not Loading
 1. Clear browser cache
 2. Check console for errors
-3. Ensure API server is running on port 3001
+3. Ensure API server is running on port 3003
 
 ## Development
 
@@ -168,10 +168,6 @@ The frontend uses:
 - Never commit .env files with real keys
 - Use environment variables for sensitive data
 
-### Wallet Security
-- This is a demo implementation
-- In production, use proper wallet connection libraries
-- Implement proper authentication and authorization
 
 ## Support
 
@@ -180,10 +176,3 @@ For issues or questions:
 2. Review service logs
 3. Ensure all dependencies are installed correctly
 
-## Next Steps
-
-1. Explore the platform features
-2. Customize the Obsidian agent character
-3. Add real wallet integration
-4. Connect to actual DAO data sources
-5. Deploy to production environment

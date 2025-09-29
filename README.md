@@ -113,7 +113,7 @@ The foundation layer that manages the ecosystem of specialized AI agents and the
   - **Market Making Agents**: Automated liquidity provision, price discovery optimization, and MEV protection
 
 **Technical Implementation**:
-- Built on Ethereum-compatible smart contracts with cross-chain functionality
+- Built on Midnight compact contracts with cross-chain functionality
 - IPFS integration for decentralized metadata storage
 - GraphQL APIs for efficient data querying and real-time updates
 
