@@ -89,7 +89,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary-500 rounded-2xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
+              <span className="text-white font-bold text-l">O-N</span>
             </div>
               <span className="font-bold text-2xl">Obsidian Network</span>
             </div>
@@ -224,7 +224,7 @@ export default function LandingPage() {
               >
                 <div className="w-12 h-12 bg-primary-500 text-white rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0">
                   1
-                </div>
+                </div>Obsidian
                 <div>
                   <h3 className="text-xl font-semibold mb-3">Privacy-First Onboarding</h3>
                   <p className="text-muted-foreground leading-relaxed">
@@ -439,7 +439,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
               <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">O</span>
+                <span className="text-white font-bold">O-N</span>
               </div>
               <span className="font-bold text-lg">Obsidian Network</span>
             </div>

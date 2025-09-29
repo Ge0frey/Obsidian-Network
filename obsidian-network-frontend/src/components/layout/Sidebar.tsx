@@ -66,7 +66,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
+              <span className="text-white font-bold text-l">O-N</span>
             </div>
             <span className="font-bold text-xl">Obsidian</span>
           </div>
@@ -109,7 +109,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between p-4 border-b h-16">
           <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : '')}>
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xl">O</span>
+              <span className="text-white font-bold text-l">O-N</span>
             </div>
             {sidebarOpen && (
               <span className="font-bold text-xl animate-fade-in">Obsidian</span>

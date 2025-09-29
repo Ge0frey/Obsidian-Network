@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
+              <span className="text-white font-bold text-l">O-N</span>
             </div>
             <span className="font-bold text-2xl">Obsidian Network</span>
           </div>
