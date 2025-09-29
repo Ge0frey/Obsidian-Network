@@ -15,7 +15,7 @@ declare global {
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3003;
 
 // Middleware
 app.use(cors());
@@ -206,6 +206,11 @@ async function initializeElizaSocket(): Promise<Socket> {
     elizaSocket.onAny((eventName, ...args) => {
       console.log('🔔 Socket event:', eventName, args);
     });
+
+    // Enhanced error logging
+    elizaSocket.on('messageError', (error) => {
+      console.error(`[${new Date().toISOString()}] ERROR: [SocketIO ${elizaSocket!.id}] Message error:`, error.error || error);
+    });
   });
 }
 
@@ -228,13 +233,13 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
       const entityId = `api-client-${Date.now()}`;
       let responseReceived = false;
       
-      // Set timeout for response
-      const timeout = setTimeout(() => {
-        if (!responseReceived) {
-          responseReceived = true;
-          reject(new Error('Timeout waiting for Eliza response'));
-        }
-      }, 15000);
+      // No timeout - wait indefinitely for response
+      // const timeout = setTimeout(() => {
+      //   if (!responseReceived) {
+      //     responseReceived = true;
+      //     reject(new Error('Timeout waiting for Eliza response'));
+      //   }
+      // }, 15000);
       
       // Listen for message broadcasts
       const handleMessageBroadcast = (data: any) => {
@@ -243,7 +248,7 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
         // Check if this message is for our room and is a response to our message
         if ((data.roomId === roomId || data.channelId === roomId) && !responseReceived) {
           responseReceived = true;
-          clearTimeout(timeout);
+          // clearTimeout(timeout); // No timeout to clear
           
           console.log('✅ Received response from Obsidian:', data);
           
@@ -276,12 +281,13 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
       // Wait a moment for room join, then send message
       setTimeout(() => {
         console.log(`💬 Sending message to room: ${roomId}`);
-        socket.emit('message', {
+        
+        const messagePayload = {
           type: SOCKET_MESSAGE_TYPE.SEND_MESSAGE,
           payload: {
             channelId: roomId,           // Required: channelId
-            serverId: '00000000-0000-0000-0000-000000000000',  // Required: serverId
-            senderId: entityId,          // Required: senderId (author_id)
+            serverId: '00000000-0000-0000-0000-000000000000',   // Required: serverId (reverted back)
+            senderId: entityId,          // Required: senderId (reverted back)
             message: message,            // Required: message
             senderName: 'Obsidian API Client',
             roomId: roomId,             // Keep roomId for compatibility
@@ -293,25 +299,20 @@ async function callElizaService(message: string, agentId?: string): Promise<any>
               timestamp: new Date().toISOString()
             }
           }
-        });
+        };
+        
+        console.log(`[${new Date().toLocaleTimeString()}] INFO: [SocketIO ${socket.id}] Full payload for debugging:`, JSON.stringify(messagePayload.payload, null, 2));
+        
+        socket.emit('message', messagePayload);
       }, 1000);
     });
     
   } catch (error: any) {
     console.error('🚨 Eliza Socket.IO Error:', error.message);
     
-    // Fallback to helloworld endpoint if Socket.IO fails
-    console.log('🔄 Falling back to helloworld endpoint...');
-    try {
-      const response = await axios.get(`${ELIZA_URL}/helloworld`);
-      return {
-        success: true,
-        message: `Hello! I'm Obsidian AI. You said: "${message}". I can help you with DAO treasury management and financial analysis. (Note: Using fallback endpoint - Socket.IO integration in progress)`,
-        source: 'helloworld_fallback'
-      };
-    } catch (fallbackError) {
-      throw error; // Throw original Socket.IO error if fallback also fails
-    }
+    // Since we removed timeout, re-throw Socket.IO errors
+    // Frontend can handle retries or fallback logic as needed
+    throw new Error(`Socket.IO communication failed: ${error.message}`);
   }
 }
 
